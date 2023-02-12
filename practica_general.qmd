@@ -1,6 +1,6 @@
 ---
 title: "Imperial College's rodents: a little description"
-author: "Irene Espinosa ManjÃ³n"
+author: "Irene Espinosa Manjón"
 format: html
 editor: visual
 ---
