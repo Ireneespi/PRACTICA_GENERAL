@@ -1,0 +1,133 @@
+---
+title: "Imperial College's rodents: a little description"
+author: "Irene Espinosa ManjÃ³n"
+format: html
+editor: visual
+---
+
+# Context
+
+The data used in this small study were collected by Dr. Malo and his students at Imperial College in July 2022.
+By trapping rodents at Silwood Park in tough field campaings, they obtained valuable data of many measurements, but here I will focus on the following: sex, age, anogenital distance, body weight and, the most difficult to achieve, basal metabolic rate.
+
+```{r}
+#| warning: false
+library(readxl)
+data <- read_xlsx("datosirene.xlsx", col_names = T)
+names(data)
+data <- data[ ,c("pittag", "sp", "sex", "age", "weight", "agd", "bmr")]
+str(data)
+library(dplyr)
+library(tidyverse)
+data <- data %>% 
+    mutate(pittag = ifelse(pittag == "NA", "UNKNOWN", pittag)) %>% 
+    dplyr::filter(sp != "Af") %>% 
+    mutate(across(c("pittag", "sp", "sex", "age"), as.factor)) %>% 
+    mutate(agd = as.numeric(agd))
+str(data)
+```
+
+# Analysis and results
+
+## Species, sexes and ages distribution
+
+These data include two different species, with `r nrow(filter(data, sp == "As"))` observations of the wood mouse (*Apodemus sylvaticus*) and `r nrow(filter(data, sp == "Mg"))` of the red vole (*Myodes glareolus*).
+As it is shown below in *Figure 1*, on the one hand, we have `r nrow(filter(data, sex == "F"))` females observations, `r nrow(filter(data, sex == "F" & sp == "As"))` of *A.sylvaticus* (As) and `r nrow(filter(data, sex == "F" & sp == "Mg"))` of *M.glareolus* (Mg).
+We also have `r nrow(filter(data, sex == "M"))` males observations, `r nrow(filter(data, sex == "M" & sp == "As"))` of *A.s.* and `r nrow(filter(data, sex == "M" & sp == "Mg"))` of *M.g.* On the other hand, there are `r nrow(filter(data, age == "A" & sp == "As"))` adult (A), `r nrow(filter(data, age == "SA" & sp == "As"))` subadult (SA) and `r nrow(filter(data, age == "J" & sp == "As"))` juvenile (J) *A.s.* observations.
+*M.g.* has `r nrow(filter(data, age == "A" & sp == "Mg"))` adults, `r nrow(filter(data, age == "SA" & sp == "Mg"))` subadults and `r nrow(filter(data, age == "A" & sp == "Mg"))` juveniles.
+
+```{r}
+#| warning: false
+library(ggplot2)
+theme <- theme(
+    axis.line = element_line(linetype = "solid", size = 0.7),
+    panel.grid.major = element_line(colour = "gray90",size = 0.4),
+    panel.grid.minor = element_line(linetype = "blank"),
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text = element_text(size = 11,colour = "black"),
+    panel.background = element_rect(fill = NA)
+    )
+a <- ggplot(data, aes(x = sex, fill = sp)) +
+    geom_bar(position = "dodge") + 
+    scale_fill_manual(values = c("As" = "mediumpurple4", "Mg" = "plum3")) + theme +
+    theme(legend.position = "none")
+b <- ggplot(data, aes(x = age, fill = sp)) +
+    geom_bar(position = "dodge") +
+    scale_fill_manual(values = c("As" = "mediumpurple4" ,"Mg" = "plum3")) + theme
+c <- ggplot(data, aes(x = age, fill = sex)) +
+    geom_bar(position = "dodge") +
+    scale_fill_manual(values = c("F" = "darkslategray4", "M" = "palegreen3")) + theme
+library(patchwork) 
+b + a + c + plot_layout(ncol = 2, nrow = 2)
+```
+
+**Figure 1.** Distribution of species, sexes and ages.
+
+## Biometric measurements
+
+It seems that adult females of *A.s.* have the highest weight values on average (Table 1; Figure 2) and, in addition, adult males of *A.s.* show the highest anogenital distances (Figure 3).
+These results could be related to reproductive status, which I will not discuss here but would be interesting to explore.
+On the other side, juvenile males of *A.s* seem to be the most active or stressed and, on the contrary, juvenile males of *M.g.* are the least active, always comparing measurements taken in a non-breeding, post-absorptive and resting, within a thermoneutral zone.
+It could be a consequence of one outlier that increases the juvenile *A.s.* average (`r mean(filter(data, sp == "As" & age == "J" & sex == "M")$bmr)`, Table 1; Figure 4) and, also, because of the limited data for some categories, as bmr would be expected to be higher for those smaller individuals (juveniles).
+
+```{r}
+#| warning: false
+stat <- data %>% group_by(sp, sex, age) %>%  
+    summarise(weight.m = mean(weight, na.rm = T), weight.sd = sd(weight, na.rm = T),
+              agd.m = mean(agd, na.rm = T), agd.sd = sd(agd, na.rm = T),
+              bmr.m = mean(bmr, na.rm = T), bmr.sd = sd(bmr, na.rm = T))
+library(kableExtra)
+kable(stat) %>% kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+**Table 1.** Means and standard errors of weight, anogenital distance (agd) and basal metabolic rate (bmr) by species (sp), sexes and ages.
+
+```{r}
+#| warning: false
+d <- ggplot(data, aes(x = sex, y = weight, fill = sp)) +
+    geom_boxplot() + 
+    scale_fill_manual(values = c("As" = "mediumpurple4", "Mg" = "plum3")) + theme +
+    theme(legend.position = "none")
+e <- ggplot(data, aes(x = age, y = weight, fill = sp)) +
+    geom_boxplot() +
+    scale_fill_manual(values = c("As" = "mediumpurple4", "Mg" = "plum3")) + theme +
+    theme(legend.position = "right", axis.title.y = element_blank())
+d + e + plot_layout(ncol = 2, nrow = 1, widths = c(1.5, 2))
+```
+
+**Figure 2.** Distribution of weight by sexes, ages and species (sp).
+
+```{r}
+#| warning: false
+f <- ggplot(data, aes(x = sex, y = agd, fill = sp)) +
+    geom_boxplot() + 
+    scale_fill_manual(values = c("As" = "darkslategray4", "Mg" = "palegreen3")) + theme +
+    theme(legend.position = "none")
+g <- ggplot(data, aes(x = age, y = agd, fill = sp)) +
+    geom_boxplot() +
+    scale_fill_manual(values = c("As" = "darkslategray4", "Mg" = "palegreen3")) + theme +
+    theme(legend.position = "right", axis.title.y = element_blank())
+f + g + plot_layout(ncol = 2, nrow = 1, widths = c(1.5, 2))
+```
+
+**Figure 3.** Distribution of anogenital distance (agd) by sexes, ages and species (sp).
+
+```{r}
+#| warning: false
+h <- ggplot(data, aes(x = sex, y = bmr, fill = sp)) +
+    geom_boxplot() + 
+    scale_fill_manual(values = c("As" = "lightsalmon4", "Mg" = "lightsalmon1")) + theme +
+    theme(legend.position = "none")
+i <- ggplot(data, aes(x = age, y = bmr, fill = sp)) +
+    geom_boxplot() +
+    scale_fill_manual(values = c("As" = "lightsalmon4", "Mg" = "lightsalmon1")) + theme +
+    theme(legend.position = "right", axis.title.y = element_blank())
+h + i + plot_layout(ncol = 2, nrow = 1, widths = c(1.5, 2))
+```
+
+**Figure 4.** Distribution of basal metabolic rate (bmr) by sexes, ages and species (sp).
+
+# Big conclussion
+
+This way to manage, transform and graphic data is fantastic!
+Thank you so much for sharing it with us.
